@@ -7,6 +7,7 @@ import {
   deleteCourse,
   assignTeacher,
   assignStudents,
+  removeStudent,
 } from '../controllers/courseController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -25,5 +26,6 @@ router.route('/:id')
 
 router.post('/:id/assign-teacher', authorize('Admin'), assignTeacher);
 router.post('/:id/assign-students', authorize('Admin', 'Teacher'), assignStudents);
+router.post('/:id/remove-student', authorize('Admin', 'Teacher'), removeStudent);
 
 export default router;

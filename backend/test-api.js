@@ -130,6 +130,25 @@ async function runTests() {
     const queryData = await queryRes.json();
     assert(queryRes.status === 200 && queryData.queries.length > 0, 'Student can view queries and teacher responses', `(Count: ${queryData.count})`);
 
+    // 14. User Registration
+    console.log('\n14. Testing User Registration');
+    const regRes = await fetch(`${BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Auto Test Student',
+        email: `autotest_${Date.now()}@ddu.ac.in`,
+        password: 'password123',
+        contactNo: '9988776655',
+        role: 'Student',
+        studentId: `AUTO${Date.now()}`,
+        department: 'Computer Engineering',
+        semester: 2,
+      }),
+    });
+    const regData = await regRes.json();
+    assert(regRes.status === 201 && regData.success && regData.token, 'Student registration creates user & returns JWT token');
+
     console.log('\n========================================');
     console.log(`📊 TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
     console.log('========================================');

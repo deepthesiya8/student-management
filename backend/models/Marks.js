@@ -19,7 +19,7 @@ const marksSchema = new mongoose.Schema(
     },
     examType: {
       type: String,
-      enum: ['Midsem', 'Endsem', 'Quiz', 'Assignment', 'Lab'],
+      enum: ['Midsem', 'Endsem', 'Quiz', 'Assignment', 'Lab', 'MidSem', 'EndSem', 'Lab Exam', 'Final'],
       required: [true, 'Please specify exam type'],
     },
     marks: {

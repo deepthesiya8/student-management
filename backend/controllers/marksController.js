@@ -1,161 +1,85 @@
 import Marks from '../models/Marks.js';
-import Course from '../models/Course.js';
-import Student from '../models/Student.js';
 
-// Helper function to calculate grade and pass/fail status
+// Helper function to determine grading based on percentage
+// 90-100: A, 80-89: B, 70-79: C, 60-69: D, 35-59: E, 0-34: F
 const calculateGrade = (percentage) => {
-  if (percentage >= 85) return { grade: 'AA', status: 'Pass' };
-  if (percentage >= 75) return { grade: 'AB', status: 'Pass' };
-  if (percentage >= 65) return { grade: 'BB', status: 'Pass' };
-  if (percentage >= 55) return { grade: 'BC', status: 'Pass' };
-  if (percentage >= 45) return { grade: 'CC', status: 'Pass' };
-  if (percentage >= 35) return { grade: 'CD', status: 'Pass' };
-  return { grade: 'FF', status: 'Fail' };
+  if (percentage >= 90) return { grade: 'A', status: 'Pass' };
+  if (percentage >= 80) return { grade: 'B', status: 'Pass' };
+  if (percentage >= 70) return { grade: 'C', status: 'Pass' };
+  if (percentage >= 60) return { grade: 'D', status: 'Pass' };
+  if (percentage >= 35) return { grade: 'E', status: 'Pass' };
+  return { grade: 'F', status: 'Fail' };
 };
 
-// Enter student marks (Single or Batch)
+// 1. Enter Marks (Single or Batch)
 export const enterMarks = async (req, res, next) => {
   try {
-    const { courseId, examType, marksList, maxMarks } = req.body;
+    const { courseId, examType, marksList, studentId, marks, maxMarks, remarks } = req.body;
 
-    const course = await Course.findById(courseId || req.body.course);
-    if (!course) {
-      return res.status(404).json({ success: false, message: 'Course not found' });
-    }
-
-    const teacherId = req.teacher ? req.teacher._id : course.teacher;
-
-    // Batch entry for entire class
+    // If batch marks are submitted for the whole class
     if (Array.isArray(marksList)) {
-      const results = [];
+      const savedMarks = [];
       for (const item of marksList) {
-        const student = await Student.findById(item.studentId);
-        if (student) {
-          const updated = await Marks.findOneAndUpdate(
-            {
-              student: student._id,
-              course: course._id,
-              examType: examType || item.examType,
-            },
-            {
-              student: student._id,
-              course: course._id,
-              teacher: teacherId,
-              examType: examType || item.examType,
-              marks: item.marks,
-              maxMarks: item.maxMarks || maxMarks || 100,
-              remarks: item.remarks || '',
-            },
-            { upsert: true, new: true }
-          );
-          results.push(updated);
-        }
+        const doc = await Marks.findOneAndUpdate(
+          { student: item.studentId, course: courseId, examType: examType || item.examType },
+          { marks: item.marks, maxMarks: item.maxMarks || 100, remarks: item.remarks || '' },
+          { upsert: true, new: true }
+        );
+        savedMarks.push(doc);
       }
-
-      return res.status(201).json({
-        success: true,
-        message: `Marks entered for ${results.length} students`,
-        marks: results,
-      });
+      return res.status(201).json({ success: true, message: 'Batch marks saved', marks: savedMarks });
     }
 
-    // Single student marks entry
-    const { studentId, marks, remarks } = req.body;
-    const student = await Student.findById(studentId);
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student not found' });
-    }
-
-    const record = await Marks.findOneAndUpdate(
-      {
-        student: student._id,
-        course: course._id,
-        examType,
-      },
-      {
-        student: student._id,
-        course: course._id,
-        teacher: teacherId,
-        examType,
-        marks,
-        maxMarks: maxMarks || 100,
-        remarks: remarks || '',
-      },
+    // For single student
+    const newMark = await Marks.findOneAndUpdate(
+      { student: studentId, course: courseId, examType },
+      { marks, maxMarks: maxMarks || 100, remarks: remarks || '' },
       { upsert: true, new: true }
     );
 
-    res.status(201).json({
-      success: true,
-      message: 'Marks recorded successfully',
-      marks: record,
-    });
+    res.status(201).json({ success: true, message: 'Marks entered', marks: newMark });
   } catch (error) {
     next(error);
   }
 };
 
-// Update marks record
+// 2. Update marks
 export const updateMarks = async (req, res, next) => {
   try {
-    const { marks, maxMarks, remarks, examType } = req.body;
-
-    const record = await Marks.findById(req.params.id);
-    if (!record) {
-      return res.status(404).json({ success: false, message: 'Marks record not found' });
-    }
-
-    if (marks !== undefined) record.marks = marks;
-    if (maxMarks !== undefined) record.maxMarks = maxMarks;
-    if (remarks !== undefined) record.remarks = remarks;
-    if (examType) record.examType = examType;
-
-    await record.save();
-
-    res.json({
-      success: true,
-      message: 'Marks updated successfully',
-      marks: record,
-    });
+    const updated = await Marks.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ success: false, message: 'Record not found' });
+    res.json({ success: true, message: 'Marks updated', marks: updated });
   } catch (error) {
     next(error);
   }
 };
 
-// Get student marks with calculated grades and overall percentage
+// 3. Get student marks and calculate overall grade
 export const getStudentMarks = async (req, res, next) => {
   try {
-    if (req.user.role === 'Student' && req.student && req.student._id.toString() !== req.params.studentId) {
-      return res.status(403).json({ success: false, message: 'Access denied: You can only view your own marks' });
-    }
-
-    const marksList = await Marks.find({ student: req.params.studentId })
-      .populate('course', 'courseCode courseName department semester credits')
+    const list = await Marks.find({ student: req.params.studentId })
+      .populate('course', 'courseCode courseName')
       .sort({ createdAt: -1 });
 
     let totalMarks = 0;
     let totalMaxMarks = 0;
 
-    const marksWithGrade = marksList.map((m) => {
-      totalMarks += m.marks;
-      totalMaxMarks += m.maxMarks;
-      const percentage = (m.marks / m.maxMarks) * 100;
-      const gradeInfo = calculateGrade(percentage);
+    const formattedMarks = list.map((item) => {
+      totalMarks += item.marks;
+      totalMaxMarks += item.maxMarks;
+      const percentage = (item.marks / item.maxMarks) * 100;
+      const evaluation = calculateGrade(percentage);
 
       return {
-        _id: m._id,
-        course: m.course,
-        examType: m.examType,
-        marks: m.marks,
-        maxMarks: m.maxMarks,
+        ...item._doc,
         percentage: Number(percentage.toFixed(2)),
-        grade: gradeInfo.grade,
-        status: gradeInfo.status,
-        remarks: m.remarks,
+        grade: evaluation.grade,
+        status: evaluation.status,
       };
     });
 
     const overallPercentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
-    const overallResult = calculateGrade(overallPercentage);
+    const finalResult = calculateGrade(overallPercentage);
 
     res.json({
       success: true,
@@ -163,76 +87,36 @@ export const getStudentMarks = async (req, res, next) => {
         totalMarks,
         totalMaxMarks,
         overallPercentage: Number(overallPercentage.toFixed(2)),
-        overallGrade: overallResult.grade,
-        overallStatus: overallResult.status,
+        overallGrade: finalResult.grade,
+        overallStatus: finalResult.status,
       },
-      marks: marksWithGrade,
+      marks: formattedMarks,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Get marks sheet for all students in a course
+// 4. Get course marks
 export const getCourseMarks = async (req, res, next) => {
   try {
-    const { examType } = req.query;
-    let query = { course: req.params.courseId };
-    if (examType) query.examType = examType;
+    const records = await Marks.find({ course: req.params.courseId })
+      .populate({ path: 'student', populate: { path: 'user', select: 'name email' } });
 
-    const records = await Marks.find(query)
-      .populate({
-        path: 'student',
-        populate: { path: 'user', select: 'name email' },
-      })
-      .sort({ marks: -1 });
-
-    res.json({
-      success: true,
-      count: records.length,
-      marks: records,
-    });
+    res.json({ success: true, count: records.length, marks: records });
   } catch (error) {
     next(error);
   }
 };
 
-// Generate overall marks and result report
+// 5. Marks report
 export const getMarksReport = async (req, res, next) => {
   try {
-    const { courseId, examType } = req.query;
-    let query = {};
-    if (courseId) query.course = courseId;
-    if (examType) query.examType = examType;
-
-    const records = await Marks.find(query)
+    const records = await Marks.find()
       .populate('course', 'courseCode courseName')
-      .populate({
-        path: 'student',
-        populate: { path: 'user', select: 'name email' },
-      });
+      .populate({ path: 'student', populate: { path: 'user', select: 'name' } });
 
-    const report = records.map((r) => {
-      const percentage = (r.marks / r.maxMarks) * 100;
-      const evaluation = calculateGrade(percentage);
-      return {
-        studentId: r.student ? r.student.studentId : 'N/A',
-        studentName: r.student && r.student.user ? r.student.user.name : 'N/A',
-        courseCode: r.course ? r.course.courseCode : 'N/A',
-        courseName: r.course ? r.course.courseName : 'N/A',
-        examType: r.examType,
-        marks: r.marks,
-        maxMarks: r.maxMarks,
-        percentage: Number(percentage.toFixed(2)),
-        grade: evaluation.grade,
-        status: evaluation.status,
-      };
-    });
-
-    res.json({
-      success: true,
-      report,
-    });
+    res.json({ success: true, report: records });
   } catch (error) {
     next(error);
   }

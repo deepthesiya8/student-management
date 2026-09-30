@@ -7,7 +7,7 @@ import Marks from '../models/Marks.js';
 import Notification from '../models/Notification.js';
 import Query from '../models/Query.js';
 
-// Get Admin dashboard statistics
+// 1. Admin Dashboard
 export const getAdminDashboard = async (req, res, next) => {
   try {
     const totalStudents = await Student.countDocuments();
@@ -15,124 +15,60 @@ export const getAdminDashboard = async (req, res, next) => {
     const totalCourses = await Course.countDocuments();
     const totalUsers = await User.countDocuments();
 
-    // Department-wise student breakdown
-    const departmentStats = await Student.aggregate([
-      { $group: { _id: '$department', count: { $sum: 1 } } },
-      { $project: { department: '$_id', count: 1, _id: 0 } },
-    ]);
-
-    // Calculate total attendance rate
-    const totalAttendanceRecords = await Attendance.countDocuments();
-    const presentRecords = await Attendance.countDocuments({ status: 'Present' });
-    const overallAttendanceRate =
-      totalAttendanceRecords > 0 ? Number(((presentRecords / totalAttendanceRecords) * 100).toFixed(2)) : 100;
-
-    const recentUsers = await User.find().sort({ createdAt: -1 }).limit(5);
+    // Overall attendance rate
+    const totalAtt = await Attendance.countDocuments();
+    const presentAtt = await Attendance.countDocuments({ status: 'Present' });
+    const overallAttendanceRate = totalAtt > 0 ? Number(((presentAtt / totalAtt) * 100).toFixed(2)) : 100;
 
     res.json({
       success: true,
-      stats: {
-        totalStudents,
-        totalTeachers,
-        totalCourses,
-        totalUsers,
-        overallAttendanceRate,
-        departmentStats,
-      },
-      recentUsers,
+      stats: { totalStudents, totalTeachers, totalCourses, totalUsers, overallAttendanceRate },
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Get Teacher dashboard statistics
+// 2. Teacher Dashboard
 export const getTeacherDashboard = async (req, res, next) => {
   try {
     const teacher = req.teacher || (await Teacher.findOne({ user: req.user._id }));
-    if (!teacher) {
-      return res.status(404).json({ success: false, message: 'Teacher profile not found' });
-    }
+    if (!teacher) return res.status(404).json({ success: false, message: 'Teacher profile not found' });
 
-    const assignedCourses = await Course.find({ teacher: teacher._id }).populate(
-      'enrolledStudents',
-      'studentId'
-    );
-
-    let totalEnrolledStudents = 0;
-    assignedCourses.forEach((c) => {
-      totalEnrolledStudents += c.enrolledStudents ? c.enrolledStudents.length : 0;
-    });
-
-    const pendingQueriesCount = await Query.countDocuments({
-      teacher: teacher._id,
-      status: 'Pending',
-    });
-
-    const recentQueries = await Query.find({ teacher: teacher._id })
-      .populate({
-        path: 'student',
-        populate: { path: 'user', select: 'name' },
-      })
-      .sort({ date: -1 })
-      .limit(5);
+    const assignedCourses = await Course.find({ teacher: teacher._id });
+    const pendingQueriesCount = await Query.countDocuments({ teacher: teacher._id, status: 'Pending' });
 
     res.json({
       success: true,
-      stats: {
-        assignedCoursesCount: assignedCourses.length,
-        totalEnrolledStudents,
-        pendingQueriesCount,
-      },
+      stats: { assignedCoursesCount: assignedCourses.length, pendingQueriesCount },
       assignedCourses,
-      recentQueries,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Get Student dashboard statistics
+// 3. Student Dashboard
 export const getStudentDashboard = async (req, res, next) => {
   try {
     const student = req.student || (await Student.findOne({ user: req.user._id }));
-    if (!student) {
-      return res.status(404).json({ success: false, message: 'Student profile not found' });
-    }
+    if (!student) return res.status(404).json({ success: false, message: 'Student profile not found' });
 
-    const enrolledCourses = await Course.find({ enrolledStudents: student._id }).populate({
-      path: 'teacher',
-      populate: { path: 'user', select: 'name' },
-    });
+    const enrolledCourses = await Course.find({ enrolledStudents: student._id });
 
-    // Attendance summary
+    // Attendance percentage
     const totalAttendance = await Attendance.countDocuments({ student: student._id });
     const presentCount = await Attendance.countDocuments({ student: student._id, status: 'Present' });
-    const attendancePercentage =
-      totalAttendance > 0 ? Number(((presentCount / totalAttendance) * 100).toFixed(2)) : 100;
+    const attendancePercentage = totalAttendance > 0 ? Number(((presentCount / totalAttendance) * 100).toFixed(2)) : 100;
 
-    // Recent marks
-    const recentMarks = await Marks.find({ student: student._id })
-      .populate('course', 'courseCode courseName')
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    // Latest notifications
-    const notifications = await Notification.find({
-      $or: [{ targetRole: 'All' }, { targetRole: 'Student' }, { recipient: req.user._id }],
-    })
-      .sort({ date: -1 })
-      .limit(5);
+    // Recent marks and notifications
+    const recentMarks = await Marks.find({ student: student._id }).populate('course', 'courseName').limit(5);
+    const notifications = await Notification.find().sort({ date: -1 }).limit(5);
 
     res.json({
       success: true,
-      student,
       enrolledCoursesCount: enrolledCourses.length,
-      attendanceSummary: {
-        totalAttendance,
-        presentCount,
-        attendancePercentage,
-      },
+      attendanceSummary: { totalAttendance, presentCount, attendancePercentage },
       enrolledCourses,
       recentMarks,
       notifications,
