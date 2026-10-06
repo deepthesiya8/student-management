@@ -24,7 +24,7 @@ export const register = async (req, res, next) => {
       department = 'Computer Engineering',
       semester = 1,
       designation = 'Assistant Professor',
-      qualification = 'M.Tech',
+      qualification = '',
     } = req.body;
 
     // Check if user email already exists

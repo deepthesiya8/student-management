@@ -4,12 +4,12 @@ const notificationSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, 'Please provide notification title'],
+      required: [true, 'notification title'],
       trim: true,
     },
     message: {
       type: String,
-      required: [true, 'Please provide notification message'],
+      required: [true, 'notification message'],
       trim: true,
     },
     targetRole: {

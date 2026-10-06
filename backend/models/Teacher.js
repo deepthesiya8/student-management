@@ -27,7 +27,7 @@ const teacherSchema = new mongoose.Schema(
     qualification: {
       type: String,
       trim: true,
-      default: 'M.Tech / Ph.D',
+      default: '',
     },
   },
   {

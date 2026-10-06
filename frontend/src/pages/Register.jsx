@@ -25,8 +25,8 @@ const Register = () => {
     teacherId: '',
     department: 'Computer Engineering',
     semester: 1,
-    designation: 'Assistant Professor',
-    qualification: 'M.Tech (Computer Engineering)',
+    designation: '',
+    qualification: '',
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +36,11 @@ const Register = () => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleRoleChange = (selectedRole) => {
+    setRole(selectedRole);
+    setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -63,39 +68,6 @@ const Register = () => {
     }
   };
 
-  // Quick Sample Demo Fill for Viva demonstration
-  const handleQuickFill = () => {
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    if (role === 'Student') {
-      setFormData({
-        name: 'New Student Demo',
-        email: `student${randomSuffix}@ddu.ac.in`,
-        password: 'password123',
-        contactNo: '9876543210',
-        studentId: `24CE${randomSuffix}`,
-        teacherId: '',
-        department: 'Computer Engineering',
-        semester: 4,
-        designation: 'Assistant Professor',
-        qualification: 'M.Tech',
-      });
-    } else {
-      setFormData({
-        name: 'Prof. Demo Faculty',
-        email: `faculty${randomSuffix}@ddu.ac.in`,
-        password: 'password123',
-        contactNo: '9898012345',
-        studentId: '',
-        teacherId: `TCH-CE-${randomSuffix}`,
-        department: 'Computer Engineering',
-        semester: 1,
-        designation: 'Assistant Professor',
-        qualification: 'Ph.D in Computer Science',
-      });
-    }
-    setError('');
-  };
-
   return (
     <div className="login-page">
       <div className="login-card" style={{ maxWidth: '520px' }}>
@@ -113,7 +85,7 @@ const Register = () => {
           <button
             type="button"
             className={`role-tab ${role === 'Student' ? 'active' : ''}`}
-            onClick={() => setRole('Student')}
+            onClick={() => handleRoleChange('Student')}
           >
             <GraduationCap size={18} />
             <span>Student</span>
@@ -121,7 +93,7 @@ const Register = () => {
           <button
             type="button"
             className={`role-tab ${role === 'Teacher' ? 'active' : ''}`}
-            onClick={() => setRole('Teacher')}
+            onClick={() => handleRoleChange('Teacher')}
           >
             <Briefcase size={18} />
             <span>Faculty / Teacher</span>
@@ -147,7 +119,7 @@ const Register = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="e.g. Deep Thesiya"
+                placeholder={role === 'Teacher' ? 'e.g. Prof. Faculty / Teacher Name' : 'e.g. Deep Thesiya'}
                 required
               />
             </div>
@@ -163,7 +135,7 @@ const Register = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="name@ddu.ac.in"
+                  placeholder={role === 'Teacher' ? 'teacher@ddu.ac.in' : 'student@ddu.ac.in'}
                   required
                 />
               </div>
@@ -225,7 +197,7 @@ const Register = () => {
                     name="teacherId"
                     value={formData.teacherId}
                     onChange={handleInputChange}
-                    placeholder="e.g. TCH-CE-05"
+                    placeholder="e.g. TCH-CE-01"
                     required
                   />
                 </div>
@@ -285,7 +257,7 @@ const Register = () => {
                   name="qualification"
                   value={formData.qualification}
                   onChange={handleInputChange}
-                  placeholder="e.g. M.Tech / Ph.D in Computer Engineering"
+                  placeholder="e.g. Ph.D / M.Tech / B.Tech"
                 />
               </div>
             </div>
@@ -297,24 +269,11 @@ const Register = () => {
           </button>
         </form>
 
-        {/* Quick Demo Fill Helper */}
-        <div className="demo-credentials-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-              Already registered?{' '}
-              <Link to="/login" style={{ color: '#2563eb', fontWeight: '600' }}>
-                Sign in here
-              </Link>
-            </span>
-            <button
-              type="button"
-              className="btn btn-sm btn-outline"
-              onClick={handleQuickFill}
-              title="Auto-fill form for quick viva testing"
-            >
-              ⚡ Quick Fill
-            </button>
-          </div>
+        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.88rem', color: '#64748b' }}>
+          Already registered?{' '}
+          <Link to="/login" style={{ color: '#2563eb', fontWeight: '600', textDecoration: 'none' }}>
+            Sign in here
+          </Link>
         </div>
       </div>
     </div>

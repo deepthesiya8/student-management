@@ -16,6 +16,6 @@ router.route('/')
   .post(authorize('Admin', 'Teacher'), createNotification);
 
 router.put('/:id/read', markAsRead);
-router.delete('/:id', authorize('Admin'), deleteNotification);
+router.delete('/:id', authorize('Admin', 'Teacher'), deleteNotification);
 
 export default router;

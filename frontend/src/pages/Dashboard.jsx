@@ -169,7 +169,12 @@ const Dashboard = () => {
           <div className="card mt-4">
             <div className="card-header">
               <h3>My Assigned Courses</h3>
-              <Link to="/attendance" className="btn btn-sm btn-primary">Take Attendance</Link>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Link to="/notifications" className="btn btn-sm btn-outline">
+                  <Bell size={15} style={{ marginRight: '4px' }} /> Post Announcement
+                </Link>
+                <Link to="/attendance" className="btn btn-sm btn-primary">Take Attendance</Link>
+              </div>
             </div>
             <div className="table-responsive">
               <table className="data-table">
