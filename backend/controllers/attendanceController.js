@@ -64,22 +64,31 @@ export const getCourseAttendance = async (req, res, next) => {
 // 4. Get student attendance history and percentage
 export const getStudentAttendance = async (req, res, next) => {
   try {
-    const records = await Attendance.find({ student: req.params.studentId })
+    const rawRecords = await Attendance.find({ student: req.params.studentId })
       .populate('course', 'courseCode courseName')
       .sort({ date: -1 });
+
+    // Filter out records where course might have been deleted/unlinked
+    const records = rawRecords.filter((r) => r.course != null);
 
     const totalClasses = records.length;
     const presentClasses = records.filter((r) => r.status === 'Present').length;
     const percentage = totalClasses > 0 ? Number(((presentClasses / totalClasses) * 100).toFixed(2)) : 100;
 
+    const summaryData = {
+      totalClasses,
+      presentClasses,
+      absentClasses: totalClasses - presentClasses,
+      percentage,
+      totalAttendance: totalClasses,
+      presentCount: presentClasses,
+      attendancePercentage: percentage,
+    };
+
     res.json({
       success: true,
-      summary: {
-        totalClasses,
-        presentClasses,
-        absentClasses: totalClasses - presentClasses,
-        percentage,
-      },
+      summary: summaryData,
+      attendanceSummary: summaryData,
       records,
     });
   } catch (error) {

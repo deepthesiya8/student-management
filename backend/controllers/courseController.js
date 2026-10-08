@@ -1,4 +1,6 @@
 import Course from '../models/Course.js';
+import Attendance from '../models/Attendance.js';
+import Marks from '../models/Marks.js';
 
 // 1. Get all courses
 export const getCourses = async (req, res, next) => {
@@ -91,6 +93,9 @@ export const deleteCourse = async (req, res, next) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
     if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    // Also remove related attendance and marks
+    await Attendance.deleteMany({ course: req.params.id });
+    await Marks.deleteMany({ course: req.params.id });
     res.json({ success: true, message: 'Course deleted successfully' });
   } catch (error) {
     next(error);

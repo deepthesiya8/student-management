@@ -108,8 +108,22 @@ const Attendance = () => {
         try {
           const res = await api.get(`/attendance/student/${profile._id}`);
           if (res.data.success) {
-            setStudentSummary(res.data.attendanceSummary);
-            setAttendanceRecords(res.data.records || []);
+            const rawRecords = res.data.records || [];
+            // Filter out any records with missing course
+            const records = rawRecords.filter((r) => r.course != null);
+            const summary = res.data.attendanceSummary || res.data.summary || {};
+
+            const total = summary.totalAttendance ?? summary.totalClasses ?? records.length;
+            const present = summary.presentCount ?? summary.presentClasses ?? records.filter((r) => r.status === 'Present').length;
+            const pct = summary.attendancePercentage ?? summary.percentage ?? (total > 0 ? Number(((present / total) * 100).toFixed(2)) : 100);
+
+            setStudentSummary({
+              ...summary,
+              totalAttendance: total,
+              presentCount: present,
+              attendancePercentage: pct,
+            });
+            setAttendanceRecords(records.length > 0 ? records : rawRecords);
           }
         } catch (err) {
           console.error('Error fetching student attendance:', err);

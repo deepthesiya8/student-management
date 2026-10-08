@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -42,6 +42,10 @@ const Register = () => {
     setRole(selectedRole);
     setError('');
   };
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, email: '', password: '' }));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -109,7 +113,11 @@ const Register = () => {
         )}
 
         {/* Registration Form */}
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
+          {/* Hidden inputs to divert aggressive browser autofill */}
+          <input type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+          <input type="password" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
           <div className="form-group">
             <label>Full Name *</label>
             <div className="input-with-icon">
@@ -120,6 +128,7 @@ const Register = () => {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder={role === 'Teacher' ? 'e.g. Prof. Faculty / Teacher Name' : 'e.g. Deep Thesiya'}
+                autoComplete="off"
                 required
               />
             </div>
@@ -136,6 +145,7 @@ const Register = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder={role === 'Teacher' ? 'teacher@ddu.ac.in' : 'student@ddu.ac.in'}
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -151,6 +161,7 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Min 6 characters"
+                  autoComplete="new-password"
                   required
                 />
               </div>
